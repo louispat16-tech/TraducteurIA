@@ -1,35 +1,34 @@
 import streamlit as st
 from transformers import pipeline
 
-st.set_page_config(page_title="Mon Traducteur IA Léger", layout="wide")
+st.set_page_config(page_title="Traducteur Expert", layout="wide")
+st.title("🌍 Traducteur Expert (Fr, Es, De, It)")
 
-st.title("🌍 Mon Traducteur IA Léger")
-st.write("Traduction rapide optimisée pour le web gratuit !")
+# On définit les modèles spécialisés (Opus-MT sont les meilleurs pour la traduction pure)
+model_map = {
+    "Français": "Helsinki-NLP/opus-mt-en-fr",
+    "Espagnol": "Helsinki-NLP/opus-mt-en-es",
+    "Allemand": "Helsinki-NLP/opus-mt-en-de",
+    "Italien": "Helsinki-NLP/opus-mt-en-it"
+}
 
-# Chargement d'un pipeline de traduction très léger avec mise en cache
+# Fonction pour charger le traducteur selon la langue choisie
 @st.cache_resource
-def load_translator():
-    # Utilisation d'un modèle plus petit qui ne dépasse pas la limite de mémoire
-    return pipeline("translation", model="Helsinki-NLP/opus-mt-en-fr")
-
-with st.spinner("Chargement du modèle..."):
-    translator = load_translator()
+def get_translator(lang_code):
+    return pipeline("translation", model=model_map[lang_code])
 
 col_gauche, col_droite = st.columns(2)
 
 with col_gauche:
-    st.subheader("1. Entrée du texte (en Anglais vers Français)")
-    texte_a_traduire = st.text_area("Tapez votre texte en anglais ici :", height=150)
-    bouton_traduire = st.button("Traduire 🚀", use_container_width=True)
+    texte = st.text_area("Entrez votre texte en anglais :", height=150)
+    langue = st.selectbox("Langue cible :", list(model_map.keys()))
+    bouton = st.button("Traduire 🚀")
 
 with col_droite:
-    st.subheader("Résultat Traduit")
-    resultat_box = st.empty()
-    
-    if bouton_traduire:
-        if texte_a_traduire.strip() != "":
-            with st.spinner("Traduction en cours..."):
-                traduction = translator(texte_a_traduire)[0]['translation_text']
-                resultat_box.success(traduction)
-        else:
-            resultat_box.warning("Veuillez d'abord entrer du texte.")
+    if bouton and texte:
+        with st.spinner(f"Traduction en {langue}..."):
+            translator = get_translator(langue)
+            resultat = translator(texte)[0]['translation_text']
+            st.success(resultat)
+    elif bouton:
+        st.warning("Veuillez entrer du texte.")
