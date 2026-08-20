@@ -19,7 +19,11 @@ models_map = {
     ("Anglais", "Allemand"): "Helsinki-NLP/opus-mt-en-de",
     ("Allemand", "Anglais"): "Helsinki-NLP/opus-mt-de-en",
     ("Anglais", "Italien"): "Helsinki-NLP/opus-mt-en-it",
-    ("Italien", "Anglais"): "Helsinki-NLP/opus-mt-it-en"
+    ("Italien", "Anglais"): "Helsinki-NLP/opus-mt-it-en",
+    ("Français", "Allemand"): "Helsinki-NLP/opus-mt-fr-de",
+    ("Allemand", "Français"): "Helsinki-NLP/opus-mt-de-fr",
+    ("Français", "Italien"): "Helsinki-NLP/opus-mt-fr-it",
+    ("Italien", "Français"): "Helsinki-NLP/opus-mt-it-fr"
 }
 
 # Chargement intelligent avec cache pour la vitesse
@@ -72,3 +76,28 @@ with col_droite:
                     st.warning(f"Désolé, la combinaison {langue_source} -> {langue_cible} n'est pas encore activée. Essayez Français ⇄ Anglais ou Espagnol.")
         else:
             st.warning("Veuillez d'abord entrer du texte à gauche.")
+st.success(traduction)
+
+# --- Synthèse vocale ---
+from gtts import gTTS
+import io
+
+# Associer la langue cible à son code pour la voix
+lang_codes = {
+    "Français": "fr",
+    "Anglais": "en",
+    "Espagnol": "es",
+    "Allemand": "de",
+    "Italien": "it"
+}
+
+if langue_cible in lang_codes:
+    tts_lang = lang_codes[langue_cible]
+    # Générer l'audio à partir du texte traduit
+    tts = gTTS(text=traduction, lang=tts_lang, slow=False)
+    audio_io = io.BytesIO()
+    tts.write_to_fp(audio_io)
+    audio_io.seek(0)
+    
+    # Afficher le lecteur audio sur l'interface
+    st.audio(audio_io, format='audio/mp3')
