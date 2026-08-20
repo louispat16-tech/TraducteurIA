@@ -28,7 +28,7 @@ col_gauche, col_droite = st.columns(2)
 
 with col_gauche:
     st.subheader("1. Entrée du texte")
-    texte_a_traduire = st.text_area("Tapez votre texte ici (en anglais pour l'instant) :", height=150, placeholder="Écrivez votre texte ici...")
+    texte_a_traduire = st.text_area("Tapez votre texte ici :", height=150, placeholder="Écrivez votre texte ici...")
     
     st.subheader("2. Langue cible")
     langue_cible = st.selectbox("Choisissez la langue de destination :", list(model_map.keys()))
