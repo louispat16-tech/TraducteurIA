@@ -1,5 +1,7 @@
 import streamlit as st
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from gTTS import gTTS
+import io
 
 # Configuration de la page
 st.set_page_config(page_title="Mon Traducteur IA Personnel", layout="wide")
@@ -7,8 +9,7 @@ st.set_page_config(page_title="Mon Traducteur IA Personnel", layout="wide")
 st.title("🌍 Mon Traducteur IA Personnel")
 st.write("Choisissez vos langues, tapez votre texte et traduisez instantanément.")
 
-# Dictionnaire des paires de langues ultra-légères et rapides
-# Format : (Langue Source, Langue Cible) -> Modèle Hugging Face
+# Dictionnaire complet des paires de langues
 models_map = {
     ("Français", "Anglais"): "Helsinki-NLP/opus-mt-fr-en",
     ("Anglais", "Français"): "Helsinki-NLP/opus-mt-en-fr",
@@ -62,42 +63,35 @@ with col_droite:
                 paire = (langue_source, langue_cible)
                 if paire in models_map:
                     model_name = models_map[paire]
-                    with st.spinner(f"Traduction en cours..."):
+                    with st.spinner("Traduction en cours..."):
                         try:
                             tokenizer, model = get_model(model_name)
                             inputs = tokenizer(texte_a_traduire, return_tensors="pt", padding=True)
                             translated_tokens = model.generate(**inputs)
                             traduction = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
                             
+                            # Affichage de la traduction
                             st.success(traduction)
+                            
+                            # --- Synthèse vocale intégrée ---
+                            lang_codes = {
+                                "Français": "fr",
+                                "Anglais": "en",
+                                "Espagnol": "es",
+                                "Allemand": "de",
+                                "Italien": "it"
+                            }
+                            
+                            if langue_cible in lang_codes:
+                                tts = gTTS(text=traduction, lang=lang_codes[langue_cible], slow=False)
+                                audio_io = io.BytesIO()
+                                tts.write_to_fp(audio_io)
+                                audio_io.seek(0)
+                                st.audio(audio_io, format='audio/mp3')
+                                
                         except Exception as e:
                             st.error(f"Erreur technique : {e}")
                 else:
-                    st.warning(f"Désolé, la combinaison {langue_source} -> {langue_cible} n'est pas encore activée. Essayez Français ⇄ Anglais ou Espagnol.")
+                    st.warning(f"Désolé, la combinaison {langue_source} -> {langue_cible} n'est pas encore activée.")
         else:
             st.warning("Veuillez d'abord entrer du texte à gauche.")
-st.success(traduction)
-
-# --- Synthèse vocale ---
-from gtts import gTTS
-import io
-
-# Associer la langue cible à son code pour la voix
-lang_codes = {
-    "Français": "fr",
-    "Anglais": "en",
-    "Espagnol": "es",
-    "Allemand": "de",
-    "Italien": "it"
-}
-
-if langue_cible in lang_codes:
-    tts_lang = lang_codes[langue_cible]
-    # Générer l'audio à partir du texte traduit
-    tts = gTTS(text=traduction, lang=tts_lang, slow=False)
-    audio_io = io.BytesIO()
-    tts.write_to_fp(audio_io)
-    audio_io.seek(0)
-    
-    # Afficher le lecteur audio sur l'interface
-    st.audio(audio_io, format='audio/mp3')
