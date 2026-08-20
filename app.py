@@ -5,49 +5,45 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 st.set_page_config(page_title="Mon Traducteur IA Personnel", layout="wide")
 
 st.title("🌍 Mon Traducteur IA Personnel")
-st.write("Sélectionnez vos langues, entrez votre texte ou utilisez le micro, et laissez l'IA traduire.")
+st.write("Choisissez vos langues, tapez votre texte et traduisez instantanément.")
 
-# Dictionnaire des langues supportées pour un modèle universel rapide
-# Utilisation de m2m100 (multilingue universel)
-model_name = "facebook/m2m100_418M"
+# Dictionnaire des paires de langues ultra-légères et rapides
+# Format : (Langue Source, Langue Cible) -> Modèle Hugging Face
+models_map = {
+    ("Français", "Anglais"): "Helsinki-NLP/opus-mt-fr-en",
+    ("Anglais", "Français"): "Helsinki-NLP/opus-mt-en-fr",
+    ("Français", "Espagnol"): "Helsinki-NLP/opus-mt-fr-es",
+    ("Espagnol", "Français"): "Helsinki-NLP/opus-mt-es-fr",
+    ("Anglais", "Espagnol"): "Helsinki-NLP/opus-mt-en-es",
+    ("Espagnol", "Anglais"): "Helsinki-NLP/opus-mt-es-en",
+    ("Anglais", "Allemand"): "Helsinki-NLP/opus-mt-en-de",
+    ("Allemand", "Anglais"): "Helsinki-NLP/opus-mt-de-en",
+    ("Anglais", "Italien"): "Helsinki-NLP/opus-mt-en-it",
+    ("Italien", "Anglais"): "Helsinki-NLP/opus-mt-it-en"
+}
 
+# Chargement intelligent avec cache pour la vitesse
 @st.cache_resource
-def get_translator_model():
+def get_model(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
     return tokenizer, model
-
-with st.spinner("Chargement de l'IA multilingue..."):
-    tokenizer, model = get_translator_model()
-
-# Mapping des langues vers les codes ISO de Facebook M2M100
-lang_codes = {
-    "Français": "fr",
-    "Anglais": "en",
-    "Espagnol": "es",
-    "Allemand": "de",
-    "Italien": "it"
-}
 
 # Création des deux colonnes
 col_gauche, col_droite = st.columns(2)
 
 with col_gauche:
-    st.subheader("1. Source et Texte")
+    st.subheader("1. Langues et Texte")
     
-    # Choix de la langue source
-    langue_source = st.selectbox("Langue d'origine :", list(lang_codes.keys()))
+    langue_source = st.selectbox("Langue d'origine :", ["Français", "Anglais", "Espagnol", "Allemand", "Italien"])
+    langue_cible = st.selectbox("Langue de destination :", ["Français", "Anglais", "Espagnol", "Allemand", "Italien"])
     
-    # Entrée vocale propre
     st.markdown("🎙️ **Entrée vocale :**")
     audio_data = st.audio_input("Enregistrer votre voix")
     if audio_data:
-        st.info("Audio capturé. (La transcription automatique nécessite un module Whisper additionnel, écrivez votre texte ci-dessous en attendant).")
+        st.info("Audio capturé. (Tapez votre texte ci-dessous pour lancer la traduction).")
 
-    texte_a_traduire = st.text_area("Ou tapez votre texte ici :", height=130, placeholder="Écrivez votre texte à traduire...")
-    
-    st.subheader("2. Langue cible")
-    langue_cible = st.selectbox("Choisissez la langue de destination :", list(lang_codes.keys()))
+    texte_a_traduire = st.text_area("Tapez votre texte ici :", height=130, placeholder="Écrivez votre texte...")
     
     bouton_traduire = st.button("Traduire 🚀", use_container_width=True)
 
@@ -57,23 +53,22 @@ with col_droite:
     if bouton_traduire:
         if texte_a_traduire.strip() != "":
             if langue_source == langue_cible:
-                st.warning("La langue source et la langue cible doivent être différentes !")
+                st.warning("Veuillez choisir deux langues différentes !")
             else:
-                with st.spinner(f"Traduction du {langue_source} vers le {langue_cible}..."):
-                    try:
-                        # Configuration de la langue source pour le modèle M2M100
-                        tokenizer.src_lang = lang_codes[langue_source]
-                        encoded = tokenizer(texte_a_traduire, return_tensors="pt")
-                        
-                        # Génération de la traduction vers la langue cible
-                        generated_tokens = model.generate(
-                            **encoded, 
-                            forced_bos_token_id=tokenizer.get_lang_id(lang_codes[langue_cible])
-                        )
-                        traduction = tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
-                        
-                        st.success(traduction)
-                    except Exception as e:
-                        st.error(f"Erreur lors de la traduction : {e}")
+                paire = (langue_source, langue_cible)
+                if paire in models_map:
+                    model_name = models_map[paire]
+                    with st.spinner(f"Traduction en cours..."):
+                        try:
+                            tokenizer, model = get_model(model_name)
+                            inputs = tokenizer(texte_a_traduire, return_tensors="pt", padding=True)
+                            translated_tokens = model.generate(**inputs)
+                            traduction = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+                            
+                            st.success(traduction)
+                        except Exception as e:
+                            st.error(f"Erreur technique : {e}")
+                else:
+                    st.warning(f"Désolé, la combinaison {langue_source} -> {langue_cible} n'est pas encore activée. Essayez Français ⇄ Anglais ou Espagnol.")
         else:
             st.warning("Veuillez d'abord entrer du texte à gauche.")
