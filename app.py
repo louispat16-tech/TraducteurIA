@@ -52,6 +52,6 @@ with col_droite:
                     
                     st.success(traduction)
                 except Exception as e:
-                    st.error(fErreur lors de la traduction : {e}")
+                    st.error(f"Erreur lors de la traduction : {e}")
         else:
             st.warning("Veuillez d'abord entrer du texte à gauche.")
